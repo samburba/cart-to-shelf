@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { parseHTML } from 'linkedom';
 import { loadAmazonScraper } from './helpers.js';
 
 test('cart: extracts books from active cart and save-for-later', () => {
@@ -130,6 +131,23 @@ test('finds the other pages of a paginated cart', () => {
     'https://www.amazon.com/gp/cart/view.html?pageNumber=2',
     'https://www.amazon.com/gp/cart/view.html?pageNumber=3',
   ], 'deduped, absolute, and excluding the page we are on');
+});
+
+test('pagination never follows a link off amazon', () => {
+  const hostile = `<html><body>
+      <a href="https://tracker.example/collect?pageNumber=2">next</a>
+      <a href="//tracker.example/collect?page=2">next</a>
+      <a href="http://www.amazon.com/gp/cart/view.html?pageNumber=2">insecure</a>
+      <a href="/gp/cart/view.html?pageNumber=2">real next page</a>
+    </body></html>`;
+  const { api } = loadAmazonScraper('cart.html');
+  const { document: doc } = parseHTML(hostile);
+
+  assert.deepEqual(
+    Array.from(api.paginationUrls(doc, 'https://www.amazon.com/gp/cart/view.html')),
+    ['https://www.amazon.com/gp/cart/view.html?pageNumber=2'],
+    'a page we are reading is not a trusted source of URLs to fetch'
+  );
 });
 
 test('scan follows pagination and merges every page', async () => {

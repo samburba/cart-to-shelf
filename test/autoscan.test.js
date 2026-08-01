@@ -9,9 +9,21 @@ test('recognises the several ways amazon writes a cart url', () => {
     'https://www.amazon.com/cart?ref_=nav_cart',
     'https://www.amazon.com/cart',
     'https://www.amazon.com/cart/smart-wagon',
-    'https://www.amazon.co.uk/gp/cart/view.html',
   ]) {
     assert.ok(isScannable(url), url);
+  }
+});
+
+// The manifest only asks for amazon.com. Arming the gate on a storefront we
+// cannot inject into buys nothing but an unactionable permission error.
+test('other amazon storefronts are out of scope, matching the manifest', () => {
+  for (const url of [
+    'https://www.amazon.co.uk/gp/cart/view.html',
+    'https://www.amazon.de/gp/cart/view.html',
+    'http://www.amazon.com/gp/cart/view.html',
+    'https://amazon.com.evil.example/gp/cart/view.html',
+  ]) {
+    assert.equal(isScannable(url), false, url);
   }
 });
 

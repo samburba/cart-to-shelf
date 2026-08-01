@@ -27,8 +27,8 @@
     "tabs"
   ],
   "host_permissions": [
-    "*://*.amazon.com/*",
-    "*://*.goodreads.com/*",
+    "https://*.amazon.com/*",
+    "https://*.goodreads.com/*",
     "https://openlibrary.org/*",
     "https://www.googleapis.com/*"
   ],

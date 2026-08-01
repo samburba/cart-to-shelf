@@ -58,7 +58,14 @@ export function csvDataUrl(csv) {
   // A BOM keeps Excel from mangling accented titles if the user opens the file
   // before importing it.
   const bytes = new TextEncoder().encode('﻿' + csv);
+
+  // Chunked rather than a character at a time: appending to a string per byte is
+  // quadratic, and spreading the whole array into fromCharCode at once blows the
+  // argument limit on a large cart. 8k keeps well clear of both.
+  const CHUNK = 8192;
   let binary = '';
-  for (const b of bytes) binary += String.fromCharCode(b);
+  for (let i = 0; i < bytes.length; i += CHUNK) {
+    binary += String.fromCharCode(...bytes.subarray(i, i + CHUNK));
+  }
   return 'data:text/csv;base64,' + btoa(binary);
 }

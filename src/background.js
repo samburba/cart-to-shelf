@@ -19,8 +19,13 @@ const CART_URL = 'https://www.amazon.com/gp/cart/view.html';
 const IMPORT_URL = 'https://www.goodreads.com/review/import';
 const GOODREADS_HOME = 'https://www.goodreads.com/';
 
-const isAmazon = (url = '') => /^https?:\/\/([^/]*\.)?amazon\./i.test(url);
-const isGoodreads = (url = '') => /^https?:\/\/([^/]*\.)?goodreads\.com/i.test(url);
+// Kept deliberately in step with host_permissions. A matcher that is broader
+// than the granted scope does not open a door — it just produces a page we then
+// fail to inject into, surfacing as an opaque permission error rather than an
+// honest "not supported here".
+const isAmazon = (url = '') => /^https:\/\/([^/]*\.)?amazon\.com(?:[/?#]|$)/i.test(url);
+const isGoodreads = (url = '') =>
+  /^https:\/\/([^/]*\.)?goodreads\.com(?:[/?#]|$)/i.test(url);
 
 const scanGate = createScanGate();
 
@@ -33,21 +38,34 @@ async function decorate(items) {
   return items.map((item) => ({ ...item, alreadySent: sent.has(item.asin) }));
 }
 
+// A page that stalls should not strand the caller. Resolving on timeout rather
+// than rejecting is deliberate: a half-loaded cart is still worth scraping, and
+// the scrape reports emptiness honestly if it isn't.
+const LOAD_TIMEOUT_MS = 15000;
+
 function waitForComplete(tabId) {
   return new Promise((resolve) => {
-    const listener = (id, info) => {
-      if (id === tabId && info.status === 'complete') {
-        chrome.tabs.onUpdated.removeListener(listener);
-        resolve();
-      }
+    let settled = false;
+    const finish = () => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      chrome.tabs.onUpdated.removeListener(listener);
+      resolve();
     };
+
+    const listener = (id, info) => {
+      if (id === tabId && info.status === 'complete') finish();
+    };
+    const timer = setTimeout(finish, LOAD_TIMEOUT_MS);
+
     chrome.tabs.onUpdated.addListener(listener);
-    chrome.tabs.get(tabId).then((tab) => {
-      if (tab.status === 'complete') {
-        chrome.tabs.onUpdated.removeListener(listener);
-        resolve();
-      }
-    });
+    chrome.tabs.get(tabId).then(
+      (tab) => {
+        if (tab.status === 'complete') finish();
+      },
+      finish // the tab vanished; nothing to wait for
+    );
   });
 }
 
@@ -182,6 +200,18 @@ const DELAY_JITTER_MS = 500;
 let shelvingRun = null;
 
 /**
+ * Bumped whenever a run is abandoned or superseded — Stop, or a fresh batch.
+ *
+ * Stop finalises the session while a book may still be in flight. Without this,
+ * that book's write lands *after* the finalisation and undoes it: the queue
+ * reappears, and the book is recorded as failed a second time on top of the
+ * entry Stop already made for it. A run whose generation has moved on drops its
+ * result on the floor instead, which is the correct thing to do with the
+ * outcome of work nobody is waiting for any more.
+ */
+let shelveGeneration = 0;
+
+/**
  * Sleep in short hops, touching an extension API between them. An idle MV3
  * worker is suspended after ~30s, and that is what silently killed earlier
  * batches partway through.
@@ -220,10 +250,14 @@ async function goodreadsTab(cachedId) {
 async function runQueue() {
   if (shelvingRun) return shelvingRun;
 
+  const generation = shelveGeneration;
+
   shelvingRun = (async () => {
     let tabId = null;
     try {
       for (;;) {
+        if (shelveGeneration !== generation) return;
+
         const session = await getSession();
         if (session.status !== 'shelving') return;
 
@@ -262,7 +296,11 @@ async function runQueue() {
           outcome = { ok: false, reason: String(err?.message || err) };
         }
 
-        // Persist after every book, before the next one is attempted.
+        // Persist after every book, before the next one is attempted — unless
+        // Stop finalised the session while this book was in flight, in which
+        // case Stop has already accounted for it.
+        if (shelveGeneration !== generation) return;
+
         const current = await getSession();
         await patchSession({
           queue: (current.queue || []).slice(1),
@@ -288,6 +326,7 @@ async function runQueue() {
 }
 
 async function shelve(books) {
+  shelveGeneration++; // any older run is now stale
   await patchSession({
     status: 'shelving',
     done: 0,
@@ -313,7 +352,7 @@ async function removeFromAmazon(books) {
   if (!targets.length) return { removed: 0, skipped: 0 };
 
   const tab = await tabFor(
-    (url) => /amazon\.[^/]+\/(gp\/cart|cart\/)/i.test(url || ''),
+    (url) => isAmazon(url) && /\/(gp\/cart|cart[/?#]|cart$)/i.test(url || ''),
     CART_URL
   );
 
@@ -396,15 +435,15 @@ async function doFinishShelving({ succeeded, failed }) {
     selected: failedAsins.has(item.asin),
   }));
 
-  // Drop only books Goodreads actually confirmed. A failure stays put — the
-  // whole point of waiting for confirmation is not to lose the ones that
-  // didn't land.
   // Surface why a book failed, right on the book.
   const reasons = new Map(failed.map((b) => [b.asin, b.reason]));
   items = items.map((item) =>
     reasons.has(item.asin) ? { ...item, lastError: reasons.get(item.asin) } : item
   );
 
+  // Drop only books Goodreads actually confirmed. A failure stays put — the
+  // whole point of waiting for confirmation is not to lose the ones that
+  // didn't land.
   const settings = await getSettings();
   if (settings.removeAdded) items = items.filter((item) => !sentAsins.has(item.asin));
 
@@ -474,6 +513,9 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
       return { ok: true };
     },
     stop: async () => {
+      // Retire the run first, so a book still in flight cannot write over the
+      // finalisation we are about to perform.
+      shelveGeneration++;
       const session = await getSession();
       await finishShelving({
         succeeded: session.succeeded || [],

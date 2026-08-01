@@ -67,8 +67,8 @@ answers):
 
 | Permission | Justification |
 | --- | --- |
-| `*://*.amazon.com/*` | Reads book titles, authors, and ASINs from the user's own cart, Save for Later, and wish list pages. This is the source of the books being transferred. |
-| `*://*.goodreads.com/*` | Adds the selected books to the user's Goodreads Want to Read shelf, using the session they are already signed in to. |
+| `https://*.amazon.com/*` | Reads book titles, authors, and ASINs from the user's own cart, Save for Later, and wish list pages. This is the source of the books being transferred. |
+| `https://*.goodreads.com/*` | Adds the selected books to the user's Goodreads Want to Read shelf, using the session they are already signed in to. |
 | `https://openlibrary.org/*` | Looks up an ISBN by title and author for Kindle and Audible editions, whose ASIN is not an ISBN. Anonymous; no user data is sent. |
 | `https://www.googleapis.com/*` | Same lookup via Google Books when Open Library has no match. Anonymous. |
 | `storage` | Caches ISBN lookups locally and records which books were already sent, so re-running does not create duplicates. Local to the device. |

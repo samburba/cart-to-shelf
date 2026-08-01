@@ -5,10 +5,15 @@
  * Pages worth scanning. Amazon writes the cart URL several ways —
  * /gp/cart/view.html, /cart?ref_=nav_cart, /cart/smart-wagon — so the match
  * must not depend on a trailing slash.
+ *
+ * amazon.com only, because that is the only host the manifest asks for. A
+ * broader match would arm the gate on amazon.co.uk and friends, and the scan
+ * would then die on a permission error the user cannot act on. Supporting other
+ * storefronts is a manifest change first, a regex change second.
  */
 const SCANNABLE = new RegExp(
   [
-    'amazon\\.[a-z.]+/',
+    '^https://([a-z0-9-]+\\.)*amazon\\.com/',
     '(',
     'gp/cart',
     '|cart(?:[/?#]|$)',

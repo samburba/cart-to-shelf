@@ -59,6 +59,9 @@
     return s;
   }
 
+  // Deliberate duplicate of isValidIsbn10 in src/lib/isbn.js — a content script
+  // is injected as a classic script and cannot import. Change both together;
+  // src/lib/isbn.js is the canonical version and the one under test.
   function isbn10Looking(s) {
     if (!/^\d{9}[\dX]$/i.test(s || '')) return false;
     let sum = 0;
@@ -132,11 +135,13 @@
    * anything uncertain is surfaced to the user rather than dropped.
    * @returns {'yes'|'maybe'}
    */
-  function classify({ asin, byline, title }) {
+  function classify({ asin, byline }) {
+    // A valid ISBN-10 as the ASIN, or a stated print/audio format, is as close
+    // to proof as this page gets. Everything else — including a plain "by
+    // Author" byline, which furniture and kitchenware also carry — is a guess,
+    // and a guess is shown to the user rather than acted on.
     if (isbn10Looking(asin)) return 'yes';
     if (FORMAT_RE.test(byline)) return 'yes';
-    if (/^B0/i.test(asin) && AUTHOR_RE.test(byline)) return 'maybe';
-    if (AUTHOR_RE.test(byline) || AUTHOR_RE.test(title)) return 'maybe';
     return 'maybe';
   }
 
@@ -156,7 +161,7 @@
       format: formatMatch ? formatMatch[0] : '',
       image: extractImage(el),
       surface,
-      confidence: classify({ asin: asin.value, byline, title: title.value }),
+      confidence: classify({ asin: asin.value, byline }),
       via: { asin: asin.via, title: title.via },
     };
   }
@@ -217,6 +222,11 @@
    * Every other page of a paginated cart. Wish lists load lazily and are
    * handled by scrolling, but the cart paginates for real — and reading only
    * page one silently loses everything after it.
+   *
+   * Only same-origin links qualify. An absolute href keeps its own host, and
+   * the page we are reading is not a trusted source of URLs — a sponsored ad
+   * carrying ?page=1 would otherwise become an outbound request the user never
+   * asked for, from an extension that promises nothing leaves the browser.
    */
   function paginationUrls(doc, currentHref) {
     const origin =
@@ -233,7 +243,9 @@
 
       let absolute;
       try {
-        absolute = new URL(href, origin).href;
+        const url = new URL(href, origin);
+        if (url.origin !== origin) continue;
+        absolute = url.href;
       } catch {
         continue;
       }

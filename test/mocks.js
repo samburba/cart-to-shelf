@@ -1,7 +1,13 @@
 // Minimal stand-ins for the extension APIs. The lib modules touch `chrome` only
 // at call time, so installing this before a dynamic import is enough.
 
+import { resetCacheVersionCheck } from '../src/lib/store.js';
+
 export function installChrome() {
+  // Fresh storage means the cache-version check must run again; the real worker
+  // never swaps storage out from under itself, so only tests need this.
+  resetCacheVersionCheck();
+
   const store = {};
   const sent = [];
 

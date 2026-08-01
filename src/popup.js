@@ -33,6 +33,21 @@ const SOURCE_LABEL = {
 
 const SURFACE_LABEL = { cart: 'Cart', saved: 'Save for Later', wishlist: 'Wish list' };
 
+// Cover art is an attribute read off a page we do not control, rendered inside
+// a privileged extension document. Anything but an Amazon image host would be a
+// request the user never asked for, so anything else is simply not loaded.
+const IMAGE_HOST_RE = /(^|\.)(media-amazon\.com|ssl-images-amazon\.com|images-amazon\.com)$/i;
+
+function safeImage(raw) {
+  if (!raw) return '';
+  try {
+    const url = new URL(raw);
+    return url.protocol === 'https:' && IMAGE_HOST_RE.test(url.hostname) ? url.href : '';
+  } catch {
+    return '';
+  }
+}
+
 async function send(message) {
   const reply = await chrome.runtime.sendMessage(message);
   if (!reply?.ok) throw new Error(reply?.error || 'Something went wrong');
@@ -75,7 +90,7 @@ function render() {
     });
 
     const img = document.createElement('img');
-    img.src = item.image || '';
+    img.src = safeImage(item.image);
     img.alt = '';
 
     const body = document.createElement('div');

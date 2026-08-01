@@ -46,8 +46,8 @@ anything Goodreads did not accept.
 
 | Permission | Why |
 | --- | --- |
-| `*://*.amazon.com/*` | Read books from your cart, wish lists, and Save for Later |
-| `*://*.goodreads.com/*` | Add books to your Want to Read shelf |
+| `https://*.amazon.com/*` | Read books from your cart, wish lists, and Save for Later |
+| `https://*.goodreads.com/*` | Add books to your Want to Read shelf |
 | `openlibrary.org`, `googleapis.com` | Look up ISBNs for Kindle and Audible editions |
 | `storage` | The cache and already-sent list described above |
 | `downloads` | Save the CSV file when you choose that path |
