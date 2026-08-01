@@ -1,0 +1,32 @@
+{
+  "manifest_version": 3,
+  "name": "Cart to Shelf",
+  "version": "0.1.0",
+  "description": "Move books from your Amazon cart, wish lists, and Save for Later onto your Goodreads Want to Read shelf.",
+  "background": {
+    "service_worker": "src/background.js",
+    "scripts": ["src/background.js"],
+    "type": "module"
+  },
+  "action": {
+    "default_popup": "src/popup.html",
+    "default_title": "Cart to Shelf"
+  },
+  "permissions": ["storage", "downloads", "scripting", "tabs"],
+  "host_permissions": [
+    "*://*.amazon.com/*",
+    "*://*.goodreads.com/*",
+    "https://openlibrary.org/*",
+    "https://www.googleapis.com/*"
+  ],
+  "icons": {
+    "48": "src/icons/icon48.png",
+    "128": "src/icons/icon128.png"
+  },
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "cart-to-shelf@burba.email",
+      "strict_min_version": "121.0"
+    }
+  }
+}

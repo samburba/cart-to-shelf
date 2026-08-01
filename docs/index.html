@@ -1,0 +1,215 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Cart to Shelf — Amazon cart to Goodreads Want to Read</title>
+    <meta
+      name="description"
+      content="A browser extension that moves books from your Amazon cart, wish lists, and Save for Later onto your Goodreads Want to Read shelf. No account, no server, no password."
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="wrap">
+      <header class="masthead">
+        <span>Cart&nbsp;to&nbsp;Shelf</span>
+        <nav>
+          <a href="#how">How it works</a>
+          <a href="#privacy">Privacy</a>
+          <a href="#install">Install</a>
+        </nav>
+      </header>
+
+      <main>
+        <section class="hero">
+          <div>
+            <h1>Your cart is not a <em>reading list</em>.</h1>
+            <p class="lede">
+              But it's where the books pile up, because it's where you eventually
+              buy them. This moves them somewhere they belong.
+            </p>
+            <div class="actions">
+              <a class="btn" href="#install">Install it</a>
+              <a class="btn ghost" href="https://github.com/samburba/cart-to-shelf"
+                >Read the source</a
+              >
+            </div>
+            <p class="note">
+              Free · open source · no account · nothing leaves your browser
+            </p>
+          </div>
+
+          <div class="rack" id="rack" aria-hidden="true">
+            <div class="shelf">
+              <div class="shelf-label"><span>Amazon cart</span><span>6 books</span></div>
+              <div class="books" id="books">
+                <span class="spine" style="--cloth: var(--oxblood); --i: 0">Crime and Punishment</span>
+                <span class="spine" style="--cloth: var(--moss); --i: 1">The Overstory</span>
+                <span class="spine" style="--cloth: var(--navy); --i: 2">Thinking, Fast and Slow</span>
+                <span class="spine" style="--cloth: var(--mustard); --i: 3">Piranesi</span>
+                <span class="spine" style="--cloth: var(--rose); --i: 4">The Dawn of Everything</span>
+                <span class="spine" style="--cloth: var(--slate); --i: 5">Le Père Goriot</span>
+              </div>
+            </div>
+
+            <div class="shelf target">
+              <div class="shelf-label"><span>Goodreads · Want to read</span><span id="tally">0 books</span></div>
+              <div class="books">
+                <div class="ghosts">
+                  <span class="ghost-spine"></span><span class="ghost-spine"></span>
+                  <span class="ghost-spine"></span><span class="ghost-spine"></span>
+                  <span class="ghost-spine"></span><span class="ghost-spine"></span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <section class="band" id="how">
+      <div class="wrap">
+        <h2>Three steps, one of them yours</h2>
+        <p>
+          The extension reads the Amazon pages you already have open and writes to
+          the Goodreads account you're already signed in to. You stay in charge of
+          what gets shelved.
+        </p>
+        <ol class="steps">
+          <li class="step" style="--cloth: var(--oxblood)">
+            <h3>Scan</h3>
+            <p>
+              Reads your cart, Save for Later, and wish lists. Automatically, as you
+              open them, if you like. Results from several lists accumulate.
+            </p>
+          </li>
+          <li class="step" style="--cloth: var(--navy)">
+            <h3>Review</h3>
+            <p>
+              Books it's confident about arrive pre-checked. The USB cable in your
+              cart shows up unchecked and labelled, rather than quietly dropped.
+            </p>
+          </li>
+          <li class="step" style="--cloth: var(--moss)">
+            <h3>Shelve</h3>
+            <p>
+              Confirmed books land on Want to Read and clear off the list. Optionally
+              they leave your Amazon cart too.
+            </p>
+          </li>
+        </ol>
+      </div>
+    </section>
+
+    <section class="band" id="privacy">
+      <div class="wrap">
+        <h2>There is no server to trust</h2>
+        <p>
+          Not "we don't look at your data" — there is nowhere for it to go. The
+          extension runs inside the sessions you're already signed in to, so it
+          never sees a password, and no part of it phones home.
+        </p>
+        <div class="circuit">
+          <div class="node">
+            <h3>Amazon</h3>
+            <p>Read in your browser, from the page you have open.</p>
+          </div>
+          <div class="node">
+            <h3>Goodreads</h3>
+            <p>Written with the session you're already signed in to.</p>
+          </div>
+          <div class="node void">
+            <h3>Our backend</h3>
+            <p>Accounts, logins, analytics, your reading habits</p>
+          </div>
+        </div>
+        <p class="note">
+          The one exception, stated plainly: for Kindle and Audible editions, an
+          anonymous title lookup goes to Open Library or Google Books. Nothing in
+          that request identifies you.
+        </p>
+      </div>
+    </section>
+
+    <section class="band">
+      <div class="wrap">
+        <h2>Two ways onto the shelf</h2>
+        <div class="paths">
+          <div class="path">
+            <span class="tag">Default</span>
+            <h3>Straight to Goodreads</h3>
+            <p>
+              Each book is searched and shelved for you, paced politely. The queue is
+              saved after every book, so an interrupted run picks up where it stopped
+              rather than starting over.
+            </p>
+          </div>
+          <div class="path secondary">
+            <span class="tag">Fallback</span>
+            <h3>CSV import</h3>
+            <p>
+              Goodreads' own import format, for when their site changes underneath us
+              or you have hundreds of books at once.
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="band" id="install">
+      <div class="wrap">
+        <h2>Install</h2>
+        <p>
+          Store listings are pending review. Until then it loads from source in about
+          a minute.
+        </p>
+        <div class="actions" style="margin-top: 2rem">
+          <a class="btn" href="https://github.com/samburba/cart-to-shelf#install"
+            >Install from source</a
+          >
+          <a class="btn ghost" href="https://github.com/samburba/cart-to-shelf">GitHub</a>
+        </div>
+
+        <div class="faq">
+          <h3>Why an extension, and not a website?</h3>
+          <p>
+            Goodreads retired its public API in December 2020 and issues no new keys.
+            Amazon has never exposed a personal cart to third parties. A website would
+            have to ask for both your passwords. An extension asks for neither.
+          </p>
+
+          <h3>What happens when Goodreads changes their site?</h3>
+          <p>
+            The automatic path breaks and every book routes to the CSV import instead,
+            which uses a documented, stable format. You lose convenience, not books.
+          </p>
+
+          <h3>Will it delete things from my Amazon account?</h3>
+          <p>
+            Only if you tick the box, and only books Goodreads confirmed, and only
+            from the cart and Save for Later. Wish lists are never touched.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <div class="wrap">
+      <footer class="footer">
+        <span>Cart to Shelf</span>
+        <span>
+          <a href="https://github.com/samburba/cart-to-shelf">Source</a> ·
+          <a href="https://github.com/samburba/cart-to-shelf/blob/main/PRIVACY.md">Privacy</a>
+        </span>
+      </footer>
+    </div>
+
+    <script src="app.js"></script>
+  </body>
+</html>

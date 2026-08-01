@@ -1,0 +1,34 @@
+<!doctype html>
+<!--
+  Trimmed wish list snapshot. Deliberately exercises the fallback rungs of the
+  selector cascade: no data-asin attribute, ASIN only in the reposition params
+  or the href, title only in a title="" attribute.
+-->
+<html>
+  <body>
+    <ul id="g-items">
+      <li
+        data-itemid="I1AAAA"
+        data-reposition-action-params='{"itemExternalId":"ABC","asin":"0374602603","listType":"wishlist"}'
+      >
+        <span id="itemImage_I1AAAA"
+          ><a href="/dp/0374602603"
+            ><img src="https://m.media-amazon.com/images/I/e.jpg"/></a
+        ></span>
+        <a id="itemName_I1AAAA" title="The Dawn of Everything: A New History of Humanity"
+          >The Dawn of Everything: A New History of Humanity</a
+        >
+        <span id="item-byline-I1AAAA">by David Graeber and David Wengrow | Hardcover</span>
+      </li>
+
+      <li data-itemid="I2BBBB">
+        <span id="itemImage_I2BBBB"
+          ><a href="/Piranesi-Susanna-Clarke/dp/163557563X/ref=w_1"
+            ><img src="https://m.media-amazon.com/images/I/f.jpg"/></a
+        ></span>
+        <a id="itemName_I2BBBB" title="Piranesi">Piranesi</a>
+        <span id="item-byline-I2BBBB">by Susanna Clarke</span>
+      </li>
+    </ul>
+  </body>
+</html>

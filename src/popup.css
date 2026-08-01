@@ -1,0 +1,157 @@
+:root {
+  color-scheme: light dark;
+  --bg: #fbfaf7;
+  --fg: #1d1b17;
+  --muted: #6b6555;
+  --line: #e2ded2;
+  --accent: #6b4f2a;
+  --accent-fg: #fff;
+  --chip: #efeade;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #191815;
+    --fg: #ece8df;
+    --muted: #9a9384;
+    --line: #302d27;
+    --accent: #c9a86a;
+    --accent-fg: #201c14;
+    --chip: #26241e;
+  }
+}
+
+* { box-sizing: border-box; }
+
+body {
+  width: 420px;
+  max-height: 580px;
+  margin: 0;
+  padding: 12px;
+  overflow-y: auto;
+  background: var(--bg);
+  color: var(--fg);
+  font: 13px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+
+header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+h1 { margin: 0; font-size: 15px; letter-spacing: 0.01em; }
+
+button {
+  padding: 6px 12px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+button:hover:not(:disabled) { border-color: var(--accent); }
+button:disabled { opacity: 0.5; cursor: default; }
+
+button.primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-fg);
+  font-weight: 600;
+}
+
+button.link {
+  border: none;
+  padding: 2px 4px;
+  color: var(--muted);
+  text-decoration: underline;
+}
+
+.status { margin: 10px 0; color: var(--muted); }
+.status.error { color: #b3261e; }
+
+.settings {
+  padding: 6px 0;
+  color: var(--muted);
+}
+
+.settings .check { align-items: flex-start; padding: 2px 0; }
+.settings .check em {
+  display: block;
+  font-size: 11px;
+  font-style: normal;
+  opacity: 0.75;
+}
+.check.danger span { color: #a15c00; }
+@media (prefers-color-scheme: dark) {
+  .check.danger span { color: #d9a25a; }
+}
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 0;
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+}
+
+.check { display: flex; align-items: center; gap: 6px; cursor: pointer; }
+
+.list { list-style: none; margin: 0; padding: 0; }
+
+.list li {
+  display: grid;
+  grid-template-columns: auto 34px 1fr;
+  gap: 8px;
+  align-items: start;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.list li.sent { opacity: 0.55; }
+
+.list img {
+  width: 34px;
+  height: 48px;
+  object-fit: contain;
+  border-radius: 3px;
+  background: var(--chip);
+}
+
+.title { font-weight: 600; }
+.meta { color: var(--muted); }
+
+.badge {
+  display: inline-block;
+  margin-top: 3px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: var(--chip);
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.badge.warn { color: #8a5a00; }
+
+footer {
+  position: sticky;
+  bottom: 0;
+  display: flex;
+  gap: 8px;
+  padding-top: 10px;
+  background: var(--bg);
+}
+
+/* Goodreads is the default path; CSV is the fallback and should read that way. */
+footer button { flex: 3; }
+footer button.quiet {
+  flex: 1;
+  border-color: transparent;
+  color: var(--muted);
+  font-size: 12px;
+}
+footer button.quiet:hover:not(:disabled) { border-color: var(--line); }

@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex" />
+    <title>Uninstalled — Cart to Shelf</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <main class="notice">
+      <div class="notice-card">
+        <div class="closed-spine"></div>
+        <h1>Off the shelf.</h1>
+        <p>
+          Cart to Shelf is removed. Everything it stored — the ISBN cache and the
+          list of books it had already sent — was local to your browser and went
+          with it. There's no account to close and no server holding anything,
+          because there never was one.
+        </p>
+        <p>
+          Your Goodreads shelf and your Amazon cart are untouched.
+        </p>
+
+        <div class="reasons">
+          <h2>If it broke, that's worth knowing</h2>
+          <p class="reason-lede">
+            The two things most likely to have gone wrong, and what they mean:
+          </p>
+          <dl>
+            <dt>Books wouldn't add</dt>
+            <dd>
+              Goodreads changed something undocumented. The CSV path is built for
+              exactly this and doesn't depend on their markup.
+            </dd>
+            <dt>The scan found nothing</dt>
+            <dd>
+              Amazon reshuffled its cart layout. Usually a one-line fix once
+              someone reports it.
+            </dd>
+          </dl>
+        </div>
+
+        <div class="actions notice-actions">
+          <a class="btn" href="https://github.com/samburba/cart-to-shelf/issues/new"
+            >Tell me what happened</a
+          >
+          <a class="btn ghost" href="./">Back to the site</a>
+        </div>
+
+        <p class="note">
+          No feedback form, no tracking on this page — just a GitHub issue, if you
+          feel like it.
+        </p>
+      </div>
+    </main>
+  </body>
+</html>

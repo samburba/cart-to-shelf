@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <link rel="stylesheet" href="popup.css" />
+    <title>Cart to Shelf</title>
+  </head>
+  <body>
+    <header>
+      <h1>Cart to Shelf</h1>
+      <button id="scan" class="primary">Scan Amazon</button>
+    </header>
+
+    <p id="status" class="status">
+      Open your Amazon cart or a wish list, then scan. Nothing leaves your browser.
+    </p>
+
+    <div class="settings">
+      <label class="check">
+        <input type="checkbox" id="auto-scan" />
+        <span>Scan automatically when I open a cart or list</span>
+      </label>
+      <label class="check">
+        <input type="checkbox" id="remove-added" />
+        <span>Clear books from this list once Goodreads confirms them</span>
+      </label>
+      <label class="check danger">
+        <input type="checkbox" id="remove-amazon" />
+        <span>
+          Also delete them from my Amazon cart and Save for Later
+          <em>wish lists are never touched</em>
+        </span>
+      </label>
+    </div>
+
+    <div id="toolbar" class="toolbar" hidden>
+      <label class="check">
+        <input type="checkbox" id="select-all" />
+        <span id="count">0 selected</span>
+      </label>
+      <span>
+        <button id="clear" class="link" title="Empty this list">Clear</button>
+        <button id="forget" class="link" title="Forget which books were already sent">
+          Reset history
+        </button>
+      </span>
+    </div>
+
+    <ul id="list" class="list"></ul>
+
+    <footer id="actions" hidden>
+      <button id="stop" class="quiet" hidden>Stop</button>
+      <button id="shelve" class="primary">Add to Goodreads</button>
+      <button id="csv" class="quiet" title="Fallback: import a CSV by hand">
+        CSV instead
+      </button>
+    </footer>
+  </body>
+  <script type="module" src="popup.js"></script>
+</html>
