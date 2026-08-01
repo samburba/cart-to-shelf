@@ -318,23 +318,46 @@ async function removeFromAmazon(books) {
       note: `Removing “${book.title}” from your cart…`,
     });
     try {
-      await chrome.scripting.executeScript({
-        target: { tabId: tab.id },
-        files: ['src/scrape/amazon-remove.js'],
-      });
+      const inject = () =>
+        chrome.scripting.executeScript({
+          target: { tabId: tab.id },
+          files: ['src/scrape/amazon-remove.js'],
+        });
+
+      await inject();
       const [res] = await chrome.scripting.executeScript({
         target: { tabId: tab.id },
         func: (asin) => globalThis.CartToShelfRemove.removeOne(asin),
         args: [book.asin],
       });
-      if (res?.result?.ok) removed++;
-      else skipped++;
+
+      if (!res?.result?.ok) {
+        skipped++;
+      } else {
+        // Confirm it actually went. Amazon re-renders asynchronously, and a
+        // click on a node detached by an earlier re-render silently does
+        // nothing — counting clicks overstated what was removed.
+        let gone = false;
+        for (let attempt = 0; attempt < 6 && !gone; attempt++) {
+          await new Promise((r) => setTimeout(r, 700));
+          try {
+            await inject();
+            const [check] = await chrome.scripting.executeScript({
+              target: { tabId: tab.id },
+              func: (asin) => globalThis.CartToShelfRemove.isPresent(asin),
+              args: [book.asin],
+            });
+            gone = check?.result === false;
+          } catch {
+            // A navigation mid-check; re-inject on the next pass.
+          }
+        }
+        if (gone) removed++;
+        else skipped++;
+      }
     } catch {
       skipped++;
     }
-    // Amazon re-renders (often a full navigation) after each delete, which
-    // tears down the injected script — hence one item per injection.
-    await new Promise((r) => setTimeout(r, 2500));
   }
   return { removed, skipped };
 }

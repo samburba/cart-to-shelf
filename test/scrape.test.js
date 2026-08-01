@@ -6,7 +6,7 @@ test('cart: extracts books from active cart and save-for-later', () => {
   const { api, document } = loadAmazonScraper('cart.html');
   const items = api.extractFrom(document);
 
-  assert.equal(items.length, 4, 'every item is surfaced, books or not');
+  assert.equal(items.length, 5, 'every item is surfaced, books or not');
 
   const byAsin = Object.fromEntries(items.map((i) => [i.asin, i]));
 
@@ -23,6 +23,28 @@ test('cart: extracts books from active cart and save-for-later', () => {
   const kahneman = byAsin['0374533555'];
   assert.equal(kahneman.surface, 'saved');
   assert.equal(kahneman.confidence, 'yes');
+});
+
+test("the truncation widget's doubled title is read once, not twice", () => {
+  const { api, document } = loadAmazonScraper('cart.html');
+  const doc = api.extractFrom(document).find((i) => i.asin === '1416594736');
+
+  assert.equal(
+    doc.title,
+    'Doc Holliday: The Life and Legend',
+    'not "Doc Holliday: The Life and LegendDoc Holliday: The Life and Legend"'
+  );
+  assert.ok(!/opens in a new tab/i.test(doc.title), 'no screen-reader label');
+  assert.equal(doc.author, 'Gary L. Roberts');
+});
+
+test('a doubled string is collapsed even without the widget markup', () => {
+  const { api, document } = loadAmazonScraper('cart.html');
+  const el = document.querySelector('#sc-active-cart [data-asin="0143039563"]');
+  el.querySelector('.sc-product-title').textContent = 'PiranesiPiranesi';
+
+  const item = api.extractItem(el, 'cart');
+  assert.equal(item.title, 'Piranesi');
 });
 
 test('cart: a non-book is flagged rather than dropped', () => {

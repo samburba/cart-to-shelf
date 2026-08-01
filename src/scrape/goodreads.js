@@ -56,11 +56,39 @@
     return bookIdFrom(parse(await res.text()));
   }
 
+  /**
+   * Progressively looser queries. Amazon titles carry edition furniture that
+   * Goodreads' index does not — series notes, "A Novel", format suffixes — and
+   * an over-specified query returns nothing at all rather than a near match.
+   */
+  function queriesFor(book) {
+    const out = [];
+    const push = (q) => {
+      const trimmed = (q || '').trim();
+      if (trimmed && !out.includes(trimmed)) out.push(trimmed);
+    };
+
+    if (book.isbn) push(book.isbn);
+
+    const title = (book.title || '')
+      .replace(/\s*[([].*?[)\]]\s*/g, ' ') // (Penguin Classics), [Hardcover]
+      .replace(/\s*[:–—-]\s*(a|an|the)\s+(novel|memoir|biography|story)\s*$/i, '')
+      .replace(/\s+/g, ' ')
+      .trim();
+
+    push([title, book.author].filter(Boolean).join(' '));
+    push(title);
+
+    // Last resort: the main title, before the subtitle.
+    const main = title.split(/\s*[:–—]\s*/)[0];
+    if (main && main.length > 3) push([main, book.author].filter(Boolean).join(' '));
+
+    return out;
+  }
+
   /** A /search?q= that matches exactly one book redirects straight to it. */
   async function search(book) {
-    const queries = [];
-    if (book.isbn) queries.push(book.isbn);
-    if (book.title) queries.push([book.title, book.author].filter(Boolean).join(' '));
+    const queries = queriesFor(book);
 
     for (let i = 0; i < queries.length; i++) {
       const url = `/search?utf8=%E2%9C%93&search_type=books&q=${encodeURIComponent(queries[i])}`;
@@ -127,5 +155,13 @@
     }
   }
 
-  globalThis.CartToShelfGR = { shelveOne, findBookId, byIsbn, search, bookIdFrom, csrfToken };
+  globalThis.CartToShelfGR = {
+    shelveOne,
+    findBookId,
+    byIsbn,
+    search,
+    queriesFor,
+    bookIdFrom,
+    csrfToken,
+  };
 })();

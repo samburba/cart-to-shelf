@@ -136,6 +136,35 @@ test('falls back to a title+author search when the isbn finds nothing', async ()
   assert.match(titleSearch, /Crime and Punishment Fyodor Dostoevsky/);
 });
 
+test('queries loosen: isbn, title+author, title, then main title only', () => {
+  const { api } = loadGoodreads({ pageHtml: PAGE });
+  const queries = api.queriesFor({
+    isbn: '1416594736',
+    title: 'Doc Holliday: The Life and Legend (Penguin Classics)',
+    author: 'Gary L. Roberts',
+  });
+
+  assert.deepEqual(Array.from(queries), [
+    '1416594736',
+    'Doc Holliday: The Life and Legend Gary L. Roberts',
+    'Doc Holliday: The Life and Legend',
+    'Doc Holliday Gary L. Roberts',
+  ]);
+});
+
+test('edition furniture is stripped from queries', () => {
+  const { api } = loadGoodreads({ pageHtml: PAGE });
+  const queries = Array.from(
+    api.queriesFor({ title: 'The Overstory: A Novel [Paperback]', author: 'Richard Powers' })
+  );
+  assert.equal(queries[0], 'The Overstory Richard Powers');
+});
+
+test('a book with no isbn and no author still produces a query', () => {
+  const { api } = loadGoodreads({ pageHtml: PAGE });
+  assert.deepEqual(Array.from(api.queriesFor({ title: 'Piranesi' })), ['Piranesi']);
+});
+
 test('an html response to the shelf post means the session expired', async () => {
   const { fetchImpl } = fetcher({
     '/search': ok(SEARCH_HTML),

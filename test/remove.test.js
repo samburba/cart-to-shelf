@@ -35,6 +35,31 @@ test('an unknown asin removes nothing', () => {
   assert.equal(api.removeOne('').ok, false, 'an empty asin must never match');
 });
 
+test('isPresent is how a removal gets confirmed', () => {
+  const { api, document } = loadRemover('cart.html');
+  assert.equal(api.isPresent('0374533555'), true);
+
+  document.querySelector('#sc-saved-cart [data-asin="0374533555"]').remove();
+  assert.equal(api.isPresent('0374533555'), false, 'gone means gone');
+
+  assert.equal(api.isPresent('B0NOTHERE00'), false);
+});
+
+test('removeOne reports a click, which is not the same as a removal', () => {
+  const { api, document } = loadRemover('cart.html');
+  for (const input of document.querySelectorAll('input[name^="submit.delete"]')) {
+    input.click = () => {}; // a detached node: the click does nothing
+  }
+
+  const result = api.removeOne('0374533555');
+  assert.equal(result.clicked, true);
+  assert.equal(
+    api.isPresent('0374533555'),
+    true,
+    'still there — the caller must verify rather than count clicks'
+  );
+});
+
 test('clicks only the control belonging to the matched item', () => {
   const { api, document } = loadRemover('cart.html');
   const clicked = [];

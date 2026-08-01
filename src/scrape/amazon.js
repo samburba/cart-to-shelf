@@ -18,8 +18,45 @@
     return null;
   }
 
+  // Screen-reader affordances Amazon injects into link text.
+  const NOISE_RE =
+    /\s*(opens? in a new (tab|window)|opens an? .*? dialog|sponsored ad)\s*/gi;
+
+  /**
+   * Amazon's truncation widget renders a title twice — the full string in an
+   * offscreen node and a shortened copy for display — so plain textContent
+   * yields "TitleTitle". Prefer the full node; failing that, drop the visible
+   * duplicate and any accessibility label.
+   */
   function text(node) {
-    return (node?.textContent || '').replace(/\s+/g, ' ').trim();
+    if (!node) return '';
+
+    const full = node.querySelector?.('.a-truncate-full');
+    let raw = full ? full.textContent : null;
+
+    if (raw == null) {
+      const clone = node.cloneNode(true);
+      for (const dupe of clone.querySelectorAll?.(
+        '.a-truncate-cut, [aria-hidden="true"], .a-offscreen'
+      ) || []) {
+        dupe.remove();
+      }
+      raw = clone.textContent || node.textContent || '';
+    }
+
+    return collapse(raw.replace(NOISE_RE, ' ').replace(/\s+/g, ' ').trim());
+  }
+
+  /** Belt and braces: a string that is exactly itself twice over. */
+  function collapse(s) {
+    const half = s.length / 2;
+    if (s.length > 6 && s.length % 2 === 0 && s.slice(0, half) === s.slice(half)) {
+      return s.slice(0, half);
+    }
+    // The same with a separating space: "Title Title".
+    const mid = Math.floor(s.length / 2);
+    if (s[mid] === ' ' && s.slice(0, mid) === s.slice(mid + 1)) return s.slice(0, mid);
+    return s;
   }
 
   function isbn10Looking(s) {
@@ -60,7 +97,9 @@
   function extractTitle(el) {
     const byAttr = pick(el, ['[id^="itemName_"][title]', 'a[title][href*="/dp/"]']);
     const attr = byAttr?.getAttribute('title');
-    if (attr) return { value: attr.trim(), via: 'title-attr' };
+    if (attr) {
+      return { value: collapse(attr.replace(NOISE_RE, ' ').replace(/\s+/g, ' ').trim()), via: 'title-attr' };
+    }
 
     const node = pick(el, [
       '.sc-product-title',

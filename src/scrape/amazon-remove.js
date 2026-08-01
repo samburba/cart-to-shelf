@@ -71,8 +71,22 @@
     const found = findRemovable(document, asin);
     if (!found) return { ok: false, reason: 'not-found-in-cart' };
     found.control.click();
-    return { ok: true, surface: found.surface };
+    // Clicking is not removing. Amazon re-renders asynchronously, and a click on
+    // a node detached by an earlier re-render does nothing at all — which is how
+    // a run can report more removals than it performed. The caller confirms with
+    // isPresent() before counting this.
+    return { ok: true, surface: found.surface, clicked: true };
   }
 
-  globalThis.CartToShelfRemove = { removeOne, findRemovable, findDeleteControl };
+  /** Is this ASIN still sitting in the cart or Save for Later? */
+  function isPresent(asin) {
+    return findRemovable(document, asin) !== null;
+  }
+
+  globalThis.CartToShelfRemove = {
+    removeOne,
+    isPresent,
+    findRemovable,
+    findDeleteControl,
+  };
 })();
