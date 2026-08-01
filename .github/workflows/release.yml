@@ -26,6 +26,16 @@ permissions:
 jobs:
   release:
     runs-on: ubuntu-latest
+    # Job level, not step level: a step's `if` cannot see env defined on that
+    # same step, so gating on it there silently evaluates to empty and the
+    # publish is skipped without saying why.
+    env:
+      CHROME_EXTENSION_ID: ${{ secrets.CHROME_EXTENSION_ID }}
+      CHROME_CLIENT_ID: ${{ secrets.CHROME_CLIENT_ID }}
+      CHROME_CLIENT_SECRET: ${{ secrets.CHROME_CLIENT_SECRET }}
+      CHROME_REFRESH_TOKEN: ${{ secrets.CHROME_REFRESH_TOKEN }}
+      AMO_JWT_ISSUER: ${{ secrets.AMO_JWT_ISSUER }}
+      AMO_JWT_SECRET: ${{ secrets.AMO_JWT_SECRET }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -63,11 +73,6 @@ jobs:
         if: >-
           (startsWith(github.ref, 'refs/tags/') || inputs.publish_chrome) &&
           env.CHROME_EXTENSION_ID != ''
-        env:
-          CHROME_EXTENSION_ID: ${{ secrets.CHROME_EXTENSION_ID }}
-          CHROME_CLIENT_ID: ${{ secrets.CHROME_CLIENT_ID }}
-          CHROME_CLIENT_SECRET: ${{ secrets.CHROME_CLIENT_SECRET }}
-          CHROME_REFRESH_TOKEN: ${{ secrets.CHROME_REFRESH_TOKEN }}
         run: |
           set -euo pipefail
           TOKEN=$(curl -sS -X POST https://oauth2.googleapis.com/token \
@@ -96,14 +101,15 @@ jobs:
         if: >-
           (startsWith(github.ref, 'refs/tags/') || inputs.publish_firefox) &&
           env.AMO_JWT_ISSUER != ''
-        env:
-          AMO_JWT_ISSUER: ${{ secrets.AMO_JWT_ISSUER }}
-          AMO_JWT_SECRET: ${{ secrets.AMO_JWT_SECRET }}
         run: |
           set -euo pipefail
+          # Sign exactly what Chrome receives. Pointing web-ext at the repo root
+          # and subtracting with --ignore-files means the two stores ship
+          # different trees, and a new top-level file silently joins the Firefox
+          # build. Unpacking the zip makes the artifact the single source.
+          rm -rf dist && mkdir dist && unzip -q cart-to-shelf.zip -d dist
           npx --yes web-ext@8 sign \
             --channel=listed \
             --api-key="$AMO_JWT_ISSUER" \
             --api-secret="$AMO_JWT_SECRET" \
-            --source-dir=. \
-            --ignore-files 'test/**' 'fixtures/**' 'docs/**' 'node_modules/**' '*.zip' '*.md'
+            --source-dir=dist

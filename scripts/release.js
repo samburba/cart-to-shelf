@@ -39,13 +39,24 @@ if (cmp(version, manifest.version) <= 0) {
   process.exit(1);
 }
 
-for (const file of ['manifest.json', 'package.json']) {
-  const json = JSON.parse(readFileSync(file, 'utf8'));
+const FILES = ['manifest.json', 'package.json'];
+const original = Object.fromEntries(FILES.map((f) => [f, readFileSync(f, 'utf8')]));
+
+for (const file of FILES) {
+  const json = JSON.parse(original[file]);
   json.version = version;
   writeFileSync(file, JSON.stringify(json, null, 2) + '\n');
 }
 
-execSync('npm test', { stdio: 'inherit' });
+// A failed test run must not leave a half-cut release behind. The version bump
+// is only real once everything after it has passed.
+try {
+  execSync('npm test', { stdio: 'inherit' });
+} catch {
+  for (const file of FILES) writeFileSync(file, original[file]);
+  console.error(`\nTests failed. Reverted the bump to ${version}; nothing was committed.`);
+  process.exit(1);
+}
 
 execSync(`git add manifest.json package.json`, { stdio: 'inherit' });
 execSync(`git commit -m "Release ${version}"`, { stdio: 'inherit' });

@@ -22,6 +22,16 @@ test('amazon: a signed-in page reports signed in', () => {
   assert.equal(api.signedIn(signedIn), true);
 });
 
+// "Hello, sign in" is Amazon's signed-out greeting. Matching /hello/ first would
+// read it as signed in, which is the wrong way round to be wrong.
+test('amazon: the signed-out greeting is not mistaken for a name', () => {
+  const { api } = loadAmazonScraper('cart.html');
+  const greeting = parseHTML(
+    '<html><body><a id="nav-link-accountList">Hello, sign in</a></body></html>'
+  ).document;
+  assert.equal(api.signedIn(greeting), false);
+});
+
 test('amazon: an unrecognised page returns null and blocks nothing', () => {
   const { api, document } = loadAmazonScraper('cart.html');
   assert.equal(
