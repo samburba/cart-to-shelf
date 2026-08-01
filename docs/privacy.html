@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Privacy Policy — Cart to Shelf</title>
+    <meta
+      name="description"
+      content="Cart to Shelf collects no data. No server, no account, no analytics. What the extension reads, what leaves your browser, and what is stored locally."
+    />
+    <link rel="canonical" href="https://cart-to-shelf.burba.dev/privacy.html" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="wrap">
+      <header class="masthead">
+        <a href="./">Cart&nbsp;to&nbsp;Shelf</a>
+        <nav><a href="https://github.com/samburba/cart-to-shelf">GitHub</a></nav>
+      </header>
+
+      <main class="band" style="border-top: none">
+        <h2>Privacy policy</h2>
+        <p class="lede wide">
+          Cart to Shelf collects nothing. There is no server, no account, and no
+          analytics. The developer never receives your data, because there is
+          nowhere for it to go.
+        </p>
+
+        <div class="faq">
+          <h3>What the extension reads</h3>
+          <p>
+            When you scan, it reads book titles, authors, ASINs, and cover image
+            URLs from the Amazon page you have open. It does not read payment
+            details, addresses, or order history.
+          </p>
+
+          <h3>What leaves your browser</h3>
+          <p>
+            Only anonymous title lookups to <strong>openlibrary.org</strong> and,
+            failing that, <strong>googleapis.com</strong> (Google Books) — and only
+            for books whose ASIN is not already an ISBN. Neither request includes
+            any identifier for you or your accounts. Adding books to Goodreads
+            happens from within a goodreads.com page using the session you are
+            already signed in to; the extension never sees, stores, or transmits
+            your credentials for either site.
+          </p>
+
+          <h3>What is stored, and where</h3>
+          <p>
+            In your browser's local extension storage, on your device only: a cache
+            of ISBN lookups (90 days) and the list of ASINs already sent, so reruns
+            don't create duplicates. Uninstalling deletes both.
+          </p>
+
+          <h3>Deleting from Amazon</h3>
+          <p>
+            The optional setting to remove books from your Amazon cart and Save for
+            Later is off by default. When enabled, it acts only on books Goodreads
+            has confirmed. Wish lists are never touched.
+          </p>
+
+          <h3>Permissions</h3>
+          <p>
+            <code>amazon.com</code> to read your cart, wish lists, and Save for
+            Later. <code>goodreads.com</code> to add books to your shelf.
+            <code>openlibrary.org</code> and <code>googleapis.com</code> for ISBN
+            lookups. <code>storage</code> for the cache described above.
+            <code>downloads</code> to save the CSV when you choose that path.
+            <code>scripting</code> and <code>tabs</code> to run the reader on the
+            page, only when you ask.
+          </p>
+        </div>
+      </main>
+
+      <footer class="footer">
+        <span>Last updated 31 July 2026</span>
+        <span><a href="./">Back to Cart to Shelf</a></span>
+      </footer>
+    </div>
+  </body>
+</html>
