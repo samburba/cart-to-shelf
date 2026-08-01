@@ -117,7 +117,10 @@ fixture in `fixtures/`.
 
 ## Site
 
-`docs/` is the GitHub Pages site — enable Pages from that folder.
+`docs/` is the GitHub Pages site, served at
+**[cart-to-shelf.burba.dev](https://cart-to-shelf.burba.dev)**. The subdomain
+exists because `burba.dev` itself is served from S3/CloudFront, not Pages — a
+project site under the apex would be handed to the wrong origin.
 `uninstalled.html` is the page the browser opens when someone removes the
 extension, wired up with `runtime.setUninstallURL`. It carries no query string
 and no tracking: nothing about who uninstalled, only what to do if it broke.
