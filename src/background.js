@@ -6,6 +6,7 @@ import { resolveAll } from './lib/resolve.js';
 import { buildCsv, csvDataUrl } from './lib/csv.js';
 import { markSent, getSent, clearSent, getBookId, setBookId } from './lib/store.js';
 import { createScanGate } from './lib/autoscan.js';
+import { listKey, reconcileItems } from './lib/reconcile.js';
 import {
   getSession,
   patchSession,
@@ -97,8 +98,13 @@ const SIGNED_OUT = {
     'You are not signed in to Goodreads. Sign in, then try again — or use “CSV instead”, which works either way.',
 };
 
-async function scanTab(tabId, { merge = false } = {}) {
-  await patchSession({ status: 'scanning', note: 'Reading the page…', error: '' });
+async function scanTab(tabId, { merge = false, quiet = false } = {}) {
+  const tab = await chrome.tabs.get(tabId).catch(() => null);
+  const key = listKey(tab?.url || '');
+
+  if (!quiet) {
+    await patchSession({ status: 'scanning', note: 'Reading the page…', error: '' });
+  }
 
   const [injected] = await chrome.scripting.executeScript({
     target: { tabId },
@@ -140,21 +146,15 @@ async function scanTab(tabId, { merge = false } = {}) {
     patchSession({ status: 'resolving', done, total })
   );
 
-  // Merging lets a cart scan and a wish list scan accumulate instead of
-  // clobbering each other — you can walk several lists and shelve once.
+  // Accumulate across different lists, replace within one — so walking the
+  // cart and two wish lists unions them, but removing a book from the cart
+  // removes it here too.
   const previous = merge ? (await getSession()).items : [];
-  const byAsin = new Map(previous.map((i) => [i.asin, i]));
-  for (const item of await decorate(resolved)) {
-    const existing = byAsin.get(item.asin);
-    byAsin.set(item.asin, {
-      ...existing,
-      ...item,
-      // Preselect the confident, unsent books; leave doubtful ones visible but
-      // unchecked. An existing manual choice always wins over the default.
-      selected: existing ? existing.selected : selectable(item),
-    });
-  }
-  const items = [...byAsin.values()];
+  const fresh = (await decorate(resolved)).map((item) => ({
+    ...item,
+    selected: selectable(item),
+  }));
+  const items = reconcileItems(previous, fresh, key);
 
   await patchSession({
     status: 'done',
@@ -164,7 +164,50 @@ async function scanTab(tabId, { merge = false } = {}) {
     note: `Found ${items.length} item${items.length === 1 ? '' : 's'}.`,
   });
   await setBadge(items.filter(selectable).length);
+  await watchTab(tabId);
   return items;
+}
+
+/** Keep an eye on a list we have scanned, so edits to it show up on their own. */
+async function watchTab(tabId) {
+  try {
+    await chrome.scripting.executeScript({
+      target: { tabId },
+      files: ['src/scrape/watch.js'],
+    });
+  } catch {
+    /* the tab navigated away mid-scan; nothing to watch */
+  }
+}
+
+// Edits arrive in bursts even after the page-side settle, and a rescan is not
+// free, so coalesce again here.
+const RESCAN_DEBOUNCE_MS = 800;
+const rescanTimers = new Map();
+
+async function onListChanged(tabId) {
+  if (tabId == null) return;
+
+  const { autoScan } = await getSettings();
+  if (!autoScan) return;
+
+  const session = await getSession();
+  if (session.status === 'shelving') return; // never interrupt a write
+
+  clearTimeout(rescanTimers.get(tabId));
+  rescanTimers.set(
+    tabId,
+    setTimeout(async () => {
+      rescanTimers.delete(tabId);
+      try {
+        // Quiet: this is a background refresh nobody asked for, so it must not
+        // stomp the status line with "Reading the page…".
+        await scanTab(tabId, { merge: true, quiet: true });
+      } catch {
+        /* the tab went away; the next scan will sort it out */
+      }
+    }, RESCAN_DEBOUNCE_MS)
+  );
 }
 
 async function scan() {
@@ -191,7 +234,11 @@ chrome.tabs.onUpdated.addListener(async (tabId, info, tab) => {
   }
 });
 
-chrome.tabs.onRemoved.addListener((tabId) => scanGate.forget(tabId));
+chrome.tabs.onRemoved.addListener((tabId) => {
+  scanGate.forget(tabId);
+  clearTimeout(rescanTimers.get(tabId));
+  rescanTimers.delete(tabId);
+});
 
 // Where the browser sends people when they remove the extension. Deliberately
 // bare: no id, no query string, nothing that could identify the uninstaller.
@@ -572,7 +619,12 @@ async function exportCsv(books) {
 
 // -------------------------------------------------------------- messaging
 
-chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  if (message.type === 'list-changed') {
+    onListChanged(sender?.tab?.id);
+    return false;
+  }
+
   const handlers = {
     state: async () => {
       const session = await getSession();
