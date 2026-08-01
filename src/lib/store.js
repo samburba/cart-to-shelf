@@ -3,15 +3,30 @@
 // rerun does not re-add books you already shelved).
 
 const CACHE_KEY = 'isbnCache';
+const CACHE_VERSION_KEY = 'isbnCacheVersion';
 const SENT_KEY = 'sentAsins';
 const CACHE_TTL_MS = 1000 * 60 * 60 * 24 * 90;
+
+// Bump when a scraping or lookup bug could have poisoned the cache. Misses are
+// cached too, so a bad title that resolved to nothing would otherwise stay
+// unresolved for 90 days — long after the bug was fixed.
+const CACHE_VERSION = 2;
 
 async function get(key, fallback) {
   const out = await chrome.storage.local.get(key);
   return out[key] === undefined ? fallback : out[key];
 }
 
+/** Drops the whole cache when the version moves, then remembers the new one. */
+async function ensureCacheVersion() {
+  const stored = await get(CACHE_VERSION_KEY, 0);
+  if (stored === CACHE_VERSION) return;
+  await chrome.storage.local.remove(CACHE_KEY);
+  await chrome.storage.local.set({ [CACHE_VERSION_KEY]: CACHE_VERSION });
+}
+
 export async function getCached(asin) {
+  await ensureCacheVersion();
   const cache = await get(CACHE_KEY, {});
   const hit = cache[asin];
   if (!hit) return null;
@@ -20,6 +35,7 @@ export async function getCached(asin) {
 }
 
 export async function setCached(asin, value) {
+  await ensureCacheVersion();
   const cache = await get(CACHE_KEY, {});
   cache[asin] = { at: Date.now(), value };
   await chrome.storage.local.set({ [CACHE_KEY]: cache });

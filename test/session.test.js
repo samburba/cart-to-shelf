@@ -74,6 +74,22 @@ test('sent asins accumulate and can be cleared', async () => {
   assert.equal((await store.getSent()).size, 0);
 });
 
+test('a cache written by an older version is discarded wholesale', async () => {
+  const chrome = installChrome();
+  // A miss cached back when titles were being scraped wrong.
+  await chrome.storage.local.set({
+    isbnCache: { B0OLDBUG000: { at: Date.now(), value: { isbn: null, source: 'none' } } },
+    isbnCacheVersion: 1,
+  });
+
+  assert.equal(
+    await store.getCached('B0OLDBUG000'),
+    null,
+    'a poisoned miss must not outlive the bug that caused it'
+  );
+  assert.equal(chrome._store.isbnCacheVersion, 2);
+});
+
 test('a stale cache entry is ignored', async () => {
   const chrome = installChrome();
   await store.setCached('B0STALE000', { isbn: '0143039563', source: 'openlibrary' });

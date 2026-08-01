@@ -157,12 +157,25 @@ try {
 }
 
 // A batch left mid-flight by a browser restart resumes on its own.
-for (const event of [chrome.runtime.onStartup, chrome.runtime.onInstalled]) {
-  event?.addListener(async () => {
-    const session = await getSession();
-    if (session.status === 'shelving' && session.queue?.length) runQueue();
-  });
-}
+chrome.runtime.onStartup?.addListener(async () => {
+  const session = await getSession();
+  if (session.status === 'shelving' && session.queue?.length) runQueue();
+});
+
+chrome.runtime.onInstalled?.addListener(async (details) => {
+  // Scanned items are a cache of what a page looked like at scan time. After an
+  // update they may have been produced by a scraping bug the update just fixed,
+  // and a stale list is indistinguishable from a fresh one in the popup. Drop
+  // it so the next scan is authoritative.
+  if (details?.reason === 'update') {
+    await patchSession({ ...EMPTY_SESSION, note: 'Updated — scan again for a fresh list.' });
+    await setBadge(0);
+    return;
+  }
+
+  const session = await getSession();
+  if (session.status === 'shelving' && session.queue?.length) runQueue();
+});
 
 // -------------------------------------------------------------- shelving
 
