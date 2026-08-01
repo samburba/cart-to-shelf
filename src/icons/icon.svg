@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128">
+  <!-- Three cloth spines standing on a shelf, one already moved into place.
+       Kept to four shapes so it still reads as books at 16px. -->
+  <rect width="128" height="128" rx="26" fill="#1b1d1a"/>
+
+  <!-- shelf line -->
+  <rect x="20" y="98" width="88" height="7" rx="3.5" fill="#e6e7de"/>
+
+  <!-- spines -->
+  <rect x="26" y="40" width="19" height="58" rx="2" fill="#7a2e2e"/>
+  <rect x="49" y="32" width="19" height="66" rx="2" fill="#b8821b"/>
+  <rect x="72" y="46" width="19" height="52" rx="2" fill="#47593a"/>
+
+  <!-- the one arriving, tilted into the gap -->
+  <rect x="95" y="38" width="19" height="60" rx="2" fill="#2a3b5c"
+        transform="rotate(11 104.5 68)"/>
+
+  <!-- gilt rules, dropped below 48px by the smaller renders -->
+  <g fill="#e6e7de" opacity="0.55" class="gilt">
+    <rect x="29" y="52" width="13" height="2"/>
+    <rect x="52" y="44" width="13" height="2"/>
+    <rect x="75" y="58" width="13" height="2"/>
+  </g>
+</svg>
