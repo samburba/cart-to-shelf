@@ -5,6 +5,7 @@
 import { resolveAll } from './lib/resolve.js';
 import { buildCsv, csvDataUrl } from './lib/csv.js';
 import { markSent, getSent, clearSent, getBookId, setBookId } from './lib/store.js';
+import { createScanGate } from './lib/autoscan.js';
 import {
   getSession,
   patchSession,
@@ -21,8 +22,7 @@ const GOODREADS_HOME = 'https://www.goodreads.com/';
 const isAmazon = (url = '') => /^https?:\/\/([^/]*\.)?amazon\./i.test(url);
 const isGoodreads = (url = '') => /^https?:\/\/([^/]*\.)?goodreads\.com/i.test(url);
 
-/** The pages worth auto-scanning: cart, Save for Later, and wish lists. */
-const SCANNABLE = /amazon\.[^/]+\/(gp\/cart|cart\/|hz\/wishlist|registry\/wishlist|gp\/registry)/i;
+const scanGate = createScanGate();
 
 function selectable(item) {
   return !item.alreadySent && item.confidence === 'yes' && item.source !== 'none';
@@ -121,18 +121,12 @@ async function scan() {
 
 // ------------------------------------------------------------- auto-scan
 
-const recentlyScanned = new Map(); // tabId -> { url, at }
-
 chrome.tabs.onUpdated.addListener(async (tabId, info, tab) => {
-  if (info.status !== 'complete' || !SCANNABLE.test(tab.url || '')) return;
+  const url = tab?.url || info.url || '';
+  if (!scanGate.shouldScan(tabId, info.status, url)) return;
 
   const { autoScan } = await getSettings();
   if (!autoScan) return;
-
-  // Amazon fires 'complete' more than once per navigation; debounce per tab.
-  const last = recentlyScanned.get(tabId);
-  if (last && last.url === tab.url && Date.now() - last.at < 15000) return;
-  recentlyScanned.set(tabId, { url: tab.url, at: Date.now() });
 
   const session = await getSession();
   if (session.status === 'shelving') return; // never interrupt a write
@@ -144,7 +138,7 @@ chrome.tabs.onUpdated.addListener(async (tabId, info, tab) => {
   }
 });
 
-chrome.tabs.onRemoved.addListener((tabId) => recentlyScanned.delete(tabId));
+chrome.tabs.onRemoved.addListener((tabId) => scanGate.forget(tabId));
 
 // Where the browser sends people when they remove the extension. Deliberately
 // bare: no id, no query string, nothing that could identify the uninstaller.
