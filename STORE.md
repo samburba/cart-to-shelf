@@ -140,3 +140,32 @@ Store versions are write-once. A rejected 1.1.0 can never be re-uploaded as
 1.1.0 — you go to 1.1.1. The release script refuses to move the version
 backwards, and the workflow refuses to build when the tag and the manifest
 disagree, which is how the wrong version otherwise reaches a store.
+
+## Screenshots
+
+Chrome requires at least one, up to five, at **1280×800** or 640×400. The first
+is the one shown on the store card and in search results, so it carries the
+most weight. AMO accepts the same images.
+
+| # | Shot | Must show |
+| --- | --- | --- |
+| 1 | Popup open over your Amazon cart | Both halves of the idea in one frame: the cart behind, the extension's list of books in front, "Add to Goodreads" visible |
+| 2 | Mid-run | The status line counting through — `Adding "…" (3/8)` — so it's clear this is doing work, not just making a list |
+| 3 | The Goodreads shelf afterwards | Want to Read with the books that just arrived. The payoff |
+| 4 | An ambiguous item | A row unchecked with "might not be a book" — you stay in control, nothing is added behind your back |
+| 5 | Settings | The three checkboxes, including the off-by-default Amazon deletion. Reviewers look for exactly this |
+
+Practical notes:
+
+- The popup is 420px wide; captured alone it's tiny in a 1280×800 frame. Shoot
+  the whole browser window with the popup open (`Cmd+Shift+4`, then Space, then
+  hold Option while clicking to drop the window shadow), then scale to exactly
+  1280×800.
+- Zoom the page to 125–150% first so text survives the store's downscaling.
+- Use light mode. Both themes work, but light reads better on a store card.
+- Check the frame for your own data: the account name in Amazon's nav, other
+  tabs, bookmarks bar, notifications.
+- No added marketing text or claims baked into the images — Chrome treats
+  overlaid promotional copy as a listing-quality problem.
+
+`store/promo-tile-440x280.png` is the optional small promo tile, ready to upload.
