@@ -203,9 +203,11 @@ a { color: inherit; }
   overflow: hidden;
   white-space: nowrap;
   box-shadow: inset -3px 0 0 rgba(0, 0, 0, 0.16), inset 3px 0 0 rgba(255, 255, 255, 0.1);
+  border: none;
+  cursor: pointer;
+  text-align: left;
   transform: translateY(0);
-  transition: transform 620ms cubic-bezier(0.22, 0.9, 0.3, 1);
-  transition-delay: calc(var(--i) * 260ms);
+  transition: transform 560ms cubic-bezier(0.22, 0.9, 0.3, 1);
 }
 
 /* Two gilt rules near the head of the spine, as on a cloth binding. */
@@ -220,8 +222,8 @@ a { color: inherit; }
 
 .spine:hover { transform: translateY(-10px); }
 
-.rack.running .spine { transform: translateY(var(--drop)); }
-.rack.running .spine:hover { transform: translateY(calc(var(--drop) - 10px)); }
+.spine.moved { transform: translateY(var(--drop)); }
+.spine.moved:hover { transform: translateY(calc(var(--drop) - 10px)); }
 
 .ghosts {
   position: absolute;
@@ -240,8 +242,17 @@ a { color: inherit; }
   border-radius: 1px 1px 0 0;
 }
 
+.hint {
+  margin: 1.25rem 0 0;
+  font-family: var(--data);
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+}
+
 .replay {
-  margin-top: 1rem;
+  margin: 0 0 0 0.25rem;
   padding: 0.35rem 0.8rem;
   border: 1px solid var(--rule);
   border-radius: 2px;
@@ -261,7 +272,7 @@ a { color: inherit; }
 
 /* ---------------------------------------------------------------- sections */
 
-.band { padding: clamp(2rem, 4vw, 3rem) 0 0; border-top: 1px solid var(--rule); }
+.band { padding: clamp(1.75rem, 3.5vw, 2.5rem) 0 0; border-top: 1px solid var(--rule); }
 
 .lede.wide { max-width: var(--measure); }
 
@@ -286,9 +297,9 @@ a { color: inherit; }
 
 /* --------------------------------------------------------------------- faq */
 
-.faq { max-width: var(--measure); margin-top: 2rem; }
+.faq { max-width: var(--measure); margin-top: 0; }
 .faq h3 {
-  margin: 2rem 0 0.4rem;
+  margin: 1.5rem 0 0.35rem;
   font-family: var(--display);
   font-size: 1.2rem;
   font-weight: 600;
@@ -305,7 +316,7 @@ a { color: inherit; }
 /* ------------------------------------------------------------------ footer */
 
 .footer {
-  padding: 3rem 0 4rem;
+  padding: 2rem 0 2.5rem;
   border-top: 1px solid var(--rule);
   font-family: var(--data);
   font-size: 0.72rem;
