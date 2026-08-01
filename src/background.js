@@ -148,7 +148,7 @@ chrome.tabs.onRemoved.addListener((tabId) => recentlyScanned.delete(tabId));
 
 // Where the browser sends people when they remove the extension. Deliberately
 // bare: no id, no query string, nothing that could identify the uninstaller.
-const UNINSTALL_URL = 'https://samburba.github.io/cart-to-shelf/uninstalled.html';
+const UNINSTALL_URL = 'https://burba.dev/cart-to-shelf/uninstalled.html';
 
 try {
   chrome.runtime.setUninstallURL?.(UNINSTALL_URL);
