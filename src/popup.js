@@ -13,6 +13,7 @@ const els = {
   selectAll: $('select-all'),
   count: $('count'),
   clear: $('clear'),
+  diagnose: $('diagnose'),
   forget: $('forget'),
   list: $('list'),
   actions: $('actions'),
@@ -182,6 +183,19 @@ els.selectAll.addEventListener('change', async () => {
   for (const item of session.items) item.selected = els.selectAll.checked;
   render();
   await send({ type: 'select', asin: null, selected: els.selectAll.checked });
+});
+
+els.diagnose.addEventListener('click', async () => {
+  try {
+    const report = await send({ type: 'diagnose' });
+    await navigator.clipboard.writeText(JSON.stringify(report, null, 2));
+    const found = report.surfaces.reduce((n, s) => n + s.items.length, 0);
+    els.status.textContent = `Copied: ${found} row${found === 1 ? '' : 's'} read, ${report.rejected.length} rejected. Paste it into a bug report.`;
+    els.status.classList.remove('error');
+  } catch (err) {
+    els.status.textContent = `Diagnostics failed: ${err.message}`;
+    els.status.classList.add('error');
+  }
 });
 
 els.stop.addEventListener('click', () => send({ type: 'stop' }));

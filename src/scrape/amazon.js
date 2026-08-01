@@ -175,16 +175,21 @@
     '[data-asin]',
   ];
 
+  /**
+   * Union of every item selector, not the first one that happens to match.
+   * Amazon does not mark every row the same way — a cart can mix rows carrying
+   * data-itemid with rows carrying only data-asin — and first-selector-wins
+   * made the odd ones out invisible.
+   */
   function itemsIn(container) {
+    const found = [];
     for (const sel of ITEM_SELECTORS) {
-      const found = [...container.querySelectorAll(sel)];
-      // Nested matches would double-count; keep only outermost.
-      const outermost = found.filter(
-        (n) => !found.some((other) => other !== n && other.contains(n))
-      );
-      if (outermost.length) return outermost;
+      for (const el of container.querySelectorAll(sel)) {
+        if (!found.includes(el)) found.push(el);
+      }
     }
-    return [];
+    // Nested matches would double-count; keep only outermost.
+    return found.filter((n) => !found.some((other) => other !== n && other.contains(n)));
   }
 
   function extractFrom(doc) {
@@ -226,7 +231,58 @@
     return extractFrom(document);
   }
 
-  globalThis.CartToShelf = { extractFrom, extractItem, classify, scan };
+  /**
+   * What the scraper actually saw, for when a book is in the cart but not in
+   * the list. Reports which containers and item selectors matched, and how far
+   * each candidate row got — so a miss can be diagnosed without guessing at
+   * markup nobody can see.
+   */
+  function diagnose(doc = document) {
+    const href = typeof location === 'undefined' ? '' : location.href;
+    const report = { url: href.split('?')[0], surfaces: [], rejected: [] };
+
+    for (const surface of SURFACES) {
+      const entry = { surface: surface.name, container: null, counts: {}, items: [] };
+      for (const sel of surface.containers) {
+        if (!doc.querySelector(sel)) continue;
+        entry.container = sel;
+        const container = doc.querySelector(sel);
+
+        for (const itemSel of ITEM_SELECTORS) {
+          entry.counts[itemSel] = container.querySelectorAll(itemSel).length;
+        }
+
+        for (const el of itemsIn(container)) {
+          const asin = extractAsin(el);
+          const title = extractTitle(el);
+          if (!asin.value || !title.value) {
+            report.rejected.push({
+              surface: surface.name,
+              asin: asin.value || null,
+              asinVia: asin.via,
+              title: title.value || null,
+              titleVia: title.via,
+              snippet: (el.textContent || '').replace(/\s+/g, ' ').trim().slice(0, 90),
+            });
+            continue;
+          }
+          const item = extractItem(el, surface.name);
+          entry.items.push({
+            asin: item.asin,
+            title: item.title,
+            author: item.author,
+            confidence: item.confidence,
+            via: item.via,
+          });
+        }
+        break;
+      }
+      report.surfaces.push(entry);
+    }
+    return report;
+  }
+
+  globalThis.CartToShelf = { extractFrom, extractItem, classify, scan, diagnose };
 })();
 
 // executeScript resolves with this promise's value.

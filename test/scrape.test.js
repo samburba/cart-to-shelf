@@ -105,6 +105,42 @@ test('the same book in two surfaces is reported once per surface', () => {
   assert.deepEqual(Array.from(crime, (i) => i.surface).sort(), ['cart', 'saved']);
 });
 
+test('a row marked differently from its neighbours is still found', () => {
+  const { api, document } = loadAmazonScraper('cart.html');
+  const container = document.querySelector('#sc-active-cart');
+  // data-asin only, no data-itemid — the shape that first-selector-wins missed.
+  const odd = document.createElement('div');
+  odd.setAttribute('data-asin', '0374602603');
+  odd.innerHTML =
+    '<span class="sc-product-title">The Dawn of Everything</span>' +
+    '<div class="sc-product-byline">by David Graeber | Hardcover</div>';
+  container.append(odd);
+
+  const asins = api.extractFrom(document).map((i) => i.asin);
+  assert.ok(asins.includes('0374602603'), 'selectors union, not first-match-wins');
+});
+
+test('diagnostics report what matched and what was rejected', () => {
+  const { api, document } = loadAmazonScraper('cart.html');
+  const container = document.querySelector('#sc-active-cart');
+  const orphan = document.createElement('div');
+  orphan.setAttribute('data-asin', '0000000000');
+  orphan.textContent = 'A row with no recoverable title';
+  container.append(orphan);
+
+  const report = api.diagnose(document);
+  const cart = report.surfaces.find((s) => s.surface === 'cart');
+
+  assert.equal(cart.container, '#sc-active-cart');
+  assert.ok(cart.counts['[data-itemid]'] > 0, 'per-selector counts localize a miss');
+  assert.ok(cart.items.some((i) => i.asin === '0143039563'));
+
+  const rejected = report.rejected.find((r) => r.asin === '0000000000');
+  assert.ok(rejected, 'a dropped row is explained, not hidden');
+  assert.equal(rejected.title, null);
+  assert.match(rejected.snippet, /no recoverable title/);
+});
+
 test('items are not double-counted when nested nodes also match', () => {
   const { api, document } = loadAmazonScraper('cart.html');
   const asins = api.extractFrom(document).map((i) => i.asin);

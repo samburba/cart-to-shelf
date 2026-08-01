@@ -488,6 +488,18 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
       return { ok: true };
     },
     scan: () => scan(),
+    diagnose: async () => {
+      const tab = await tabFor(isAmazon, CART_URL);
+      await chrome.scripting.executeScript({
+        target: { tabId: tab.id },
+        files: ['src/scrape/amazon.js'],
+      });
+      const [res] = await chrome.scripting.executeScript({
+        target: { tabId: tab.id },
+        func: () => globalThis.CartToShelf.diagnose(),
+      });
+      return res?.result || null;
+    },
     shelve: () => shelve(message.books),
     csv: () => exportCsv(message.books),
     settings: () => setSettings(message.patch),
