@@ -83,6 +83,20 @@ async function tabFor(predicate, fallbackUrl) {
 
 // ---------------------------------------------------------------- scanning
 
+/** Failure reasons that mean the Goodreads session is gone, not that the book is. */
+const SESSION_LOST = new Set(['not-signed-in', 'no-csrf-token']);
+
+/**
+ * A signed-out Amazon page looks exactly like an empty cart, and a signed-out
+ * Goodreads returns the sign-in page for every write. Both read as "the
+ * extension is broken" unless we say otherwise.
+ */
+const SIGNED_OUT = {
+  amazon: 'You are not signed in to Amazon. Sign in, then scan again.',
+  goodreads:
+    'You are not signed in to Goodreads. Sign in, then try again — or use “CSV instead”, which works either way.',
+};
+
 async function scanTab(tabId, { merge = false } = {}) {
   await patchSession({ status: 'scanning', note: 'Reading the page…', error: '' });
 
@@ -93,9 +107,30 @@ async function scanTab(tabId, { merge = false } = {}) {
   const found = injected?.result || [];
 
   if (!found.length) {
+    // Nothing found is ambiguous: an empty cart and a signed-out one look the
+    // same. Ask before blaming the page — and if the question cannot be asked,
+    // fall back to the ordinary empty-page result rather than inventing a
+    // diagnosis.
+    let signedOut = false;
+    try {
+      const [auth] = await chrome.scripting.executeScript({
+        target: { tabId },
+        func: () => globalThis.CartToShelf.signedIn(),
+      });
+      signedOut = auth?.result === false;
+    } catch {
+      /* the page went away mid-scan; "no books" is still the honest answer */
+    }
+
     const session = await getSession();
     const items = merge ? session.items : [];
-    await patchSession({ status: 'done', items, note: 'No books found on that page.' });
+
+    await patchSession({
+      status: signedOut ? 'error' : 'done',
+      items,
+      error: signedOut ? SIGNED_OUT.amazon : '',
+      note: signedOut ? '' : 'No books found on that page.',
+    });
     await setBadge(items.filter(selectable).length);
     return items;
   }
@@ -313,6 +348,19 @@ async function runQueue() {
           done: total - (current.queue || []).length + 1,
         });
 
+        // A session that lapsed mid-run fails every remaining book identically.
+        // Stop and say so once, rather than grinding through forty of them and
+        // burying the reason in a list.
+        if (!outcome.ok && SESSION_LOST.has(outcome.reason)) {
+          const s = await getSession();
+          await finishShelving({
+            succeeded: s.succeeded || [],
+            failed: [...(s.failed || []), ...(s.queue || [])],
+            error: SIGNED_OUT.goodreads,
+          });
+          return;
+        }
+
         if ((current.queue || []).length > 1) {
           await sleepAlive(DELAY_MIN_MS + Math.random() * DELAY_JITTER_MS);
         }
@@ -327,6 +375,32 @@ async function runQueue() {
 
 async function shelve(books) {
   shelveGeneration++; // any older run is now stale
+
+  // Check once up front rather than discovering it forty failures in. Only a
+  // definite "signed out" stops the run: the check is an optimisation, and a
+  // check that cannot complete must not be the reason a working batch is
+  // refused. The per-book path catches a lapsed session anyway.
+  let signedOut = false;
+  try {
+    const tab = await goodreadsTab(null);
+    await chrome.scripting.executeScript({
+      target: { tabId: tab.id },
+      files: ['src/scrape/goodreads.js'],
+    });
+    const [auth] = await chrome.scripting.executeScript({
+      target: { tabId: tab.id },
+      func: () => globalThis.CartToShelfGR.signedIn(),
+    });
+    signedOut = auth?.result === false;
+  } catch {
+    /* could not look; proceed and let the books themselves report it */
+  }
+
+  if (signedOut) {
+    await patchSession({ status: 'done', error: SIGNED_OUT.goodreads, queue: [] });
+    return { started: false, signedOut: true };
+  }
+
   await patchSession({
     status: 'shelving',
     done: 0,
@@ -411,17 +485,17 @@ async function removeFromAmazon(books) {
 // Stop and natural completion can race; the Amazon deletions must not run twice.
 let finishing = false;
 
-async function finishShelving({ succeeded = [], failed = [] }) {
+async function finishShelving({ succeeded = [], failed = [], error = '' }) {
   if (finishing) return;
   finishing = true;
   try {
-    await doFinishShelving({ succeeded, failed });
+    await doFinishShelving({ succeeded, failed, error });
   } finally {
     finishing = false;
   }
 }
 
-async function doFinishShelving({ succeeded, failed }) {
+async function doFinishShelving({ succeeded, failed, error = '' }) {
   if (succeeded.length) await markSent(succeeded.map((b) => b.asin));
 
   const sentAsins = new Set(succeeded.map((b) => b.asin));
@@ -461,6 +535,7 @@ async function doFinishShelving({ succeeded, failed }) {
     total: 0,
     queue: [],
     result: { succeeded, failed },
+    error,
     note:
       (failed.length
         ? `Added ${succeeded.length}. ${failed.length} did not go through (${failed[0].reason}) — still listed and selected, so “CSV instead” will import them.`

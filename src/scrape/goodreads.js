@@ -21,6 +21,24 @@
     return meta?.getAttribute('content') || '';
   }
 
+  /**
+   * Tri-state, like the Amazon side: null means the page is unfamiliar, and an
+   * unfamiliar page must not block a shelving run that would have worked.
+   */
+  function signedIn(doc = document) {
+    if (doc.querySelector('a[href*="/user/sign_out"], .siteHeader__personal')) return true;
+    if (doc.querySelector('a[href^="/user/show/"]')) return true;
+
+    if (
+      doc.querySelector(
+        'form[action*="/user/sign_in"], a[href*="/user/sign_in"], #userSignInFormField'
+      )
+    ) {
+      return false;
+    }
+    return null;
+  }
+
   function parse(html) {
     return new DOMParser().parseFromString(html, 'text/html');
   }
@@ -163,5 +181,6 @@
     queriesFor,
     bookIdFrom,
     csrfToken,
+    signedIn,
   };
 })();

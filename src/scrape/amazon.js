@@ -294,6 +294,32 @@
 
   const MAX_PAGES = 20;
 
+  /**
+   * Tri-state on purpose: true, false, or null for "cannot tell". A signed-out
+   * cart looks like an empty one, and "no books found" sends someone hunting
+   * for a scraping bug that isn't there. Only a positive signal either way is
+   * acted on — an unrecognised page must never block a scan that would work.
+   */
+  function signedIn(doc = document) {
+    const href = typeof location === 'undefined' ? '' : location.href;
+    if (/\/ap\/signin/i.test(href)) return false;
+
+    // Signed in: an account menu that offers a way out.
+    if (doc.querySelector('#nav-item-signout, a[href*="/gp/flex/sign-out"]')) return true;
+
+    const account = doc.querySelector('#nav-link-accountList, #nav-link-accountList-nav-line-1');
+    const greeting = (account?.textContent || '').replace(/\s+/g, ' ').trim();
+    if (greeting) {
+      if (/sign\s?in/i.test(greeting)) return false;
+      if (/hello|hi\b/i.test(greeting)) return true;
+    }
+
+    if (doc.querySelector('#nav-item-signin, form[action*="/ap/signin"], #ap_email')) {
+      return false;
+    }
+    return null;
+  }
+
   async function scan() {
     await loadAll();
 
@@ -387,6 +413,7 @@
     diagnose,
     paginationUrls,
     mergeItems,
+    signedIn,
   };
 })();
 

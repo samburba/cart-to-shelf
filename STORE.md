@@ -104,3 +104,39 @@ throttled, and confined to the user's own account — but it is a real basis on
 which a reviewer could push back, and Goodreads could break the automatic path
 at any time. The CSV import path does not depend on any of it, which is worth
 saying plainly in the listing rather than discovering in a rejection.
+
+## Releases
+
+`npm run release 1.1.0` bumps `manifest.json` and `package.json`, runs the
+tests, commits, tags `v1.1.0`, and pushes. The tag triggers
+`.github/workflows/release.yml`, which re-runs the tests, checks the tag agrees
+with the manifest, builds the zip, attaches it to a GitHub release, and — if the
+secrets below are set — submits to both stores.
+
+Without those secrets it still tests, builds, and publishes the GitHub release.
+You just upload the zip by hand. Nothing breaks; a step is skipped.
+
+### Chrome secrets
+
+Repo → Settings → Secrets and variables → Actions:
+
+| Secret | Where it comes from |
+| --- | --- |
+| `CHROME_EXTENSION_ID` | The item's ID, visible in the developer dashboard URL after the first manual upload |
+| `CHROME_CLIENT_ID`, `CHROME_CLIENT_SECRET` | Google Cloud console → enable the **Chrome Web Store API** → create an OAuth client of type *Desktop app* |
+| `CHROME_REFRESH_TOKEN` | Exchange an auth code for a refresh token once, using that client, with scope `https://www.googleapis.com/auth/chromewebstore` |
+
+The **first** submission has to be manual — the API can update an existing item
+but cannot create one, and the listing copy, screenshots, and privacy
+disclosures are dashboard-only fields anyway.
+
+### Firefox secrets
+
+AMO → Manage API Keys: `AMO_JWT_ISSUER` and `AMO_JWT_SECRET`.
+
+### Version discipline
+
+Store versions are write-once. A rejected 1.1.0 can never be re-uploaded as
+1.1.0 — you go to 1.1.1. The release script refuses to move the version
+backwards, and the workflow refuses to build when the tag and the manifest
+disagree, which is how the wrong version otherwise reaches a store.

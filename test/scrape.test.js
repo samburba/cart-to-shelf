@@ -224,3 +224,24 @@ test('items are not double-counted when nested nodes also match', () => {
   const asins = api.extractFrom(document).map((i) => i.asin);
   assert.equal(new Set(asins).size, asins.length);
 });
+
+// A signed-out cart renders as an empty one, so "no books found" would send
+// someone hunting a scraping bug that isn't there.
+test('sign-in state is read from the nav, and is honestly unsure when it cannot tell', () => {
+  const { api } = loadAmazonScraper('cart.html');
+  const doc = (html) => parseHTML(`<html><body>${html}</body></html>`).document;
+
+  assert.equal(api.signedIn(doc('<a id="nav-item-signout" href="/x">Sign Out</a>')), true);
+  assert.equal(api.signedIn(doc('<span id="nav-link-accountList">Hello, Sam</span>')), true);
+  assert.equal(
+    api.signedIn(doc('<span id="nav-link-accountList">Hello, sign in</span>')),
+    false,
+    'the greeting says sign in — that beats the word hello sitting next to it'
+  );
+  assert.equal(api.signedIn(doc('<form action="/ap/signin"></form>')), false);
+  assert.equal(
+    api.signedIn(doc('<div>a page with no nav at all</div>')),
+    null,
+    'unrecognised must be null, never false — a wrong "signed out" blocks a working scan'
+  );
+});

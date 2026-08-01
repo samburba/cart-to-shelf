@@ -55,7 +55,10 @@ async function send(message) {
 }
 
 function statusText(s) {
-  if (s.error) return s.error;
+  // An error and a note are not alternatives when a run ends early: the error
+  // says why it stopped, the note says how far it got. Losing the count is
+  // losing the thing the user most needs to know.
+  if (s.error) return s.note ? `${s.error} ${s.note}` : s.error;
   switch (s.status) {
     case 'scanning':
       return 'Reading the page…';

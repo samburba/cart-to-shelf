@@ -6,7 +6,8 @@
   "description": "Browser extension: Amazon cart, wish lists, and Save for Later -> Goodreads Want to Read.",
   "scripts": {
     "test": "node --test 'test/*.test.js'",
-    "build": "rm -f cart-to-shelf.zip && zip -r cart-to-shelf.zip manifest.json src -x '*.DS_Store' '*.svg'"
+    "build": "rm -f cart-to-shelf.zip && zip -r cart-to-shelf.zip manifest.json src -x '*.DS_Store' '*.svg'",
+    "release": "node scripts/release.js"
   },
   "devDependencies": {
     "linkedom": "^0.18.5"
