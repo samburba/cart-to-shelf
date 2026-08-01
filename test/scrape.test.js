@@ -120,6 +120,66 @@ test('a row marked differently from its neighbours is still found', () => {
   assert.ok(asins.includes('0374602603'), 'selectors union, not first-match-wins');
 });
 
+test('finds the other pages of a paginated cart', () => {
+  const { api, document } = loadAmazonScraper('cart.html');
+  const urls = Array.from(
+    api.paginationUrls(document, 'https://www.amazon.com/gp/cart/view.html')
+  );
+
+  assert.deepEqual(urls, [
+    'https://www.amazon.com/gp/cart/view.html?pageNumber=2',
+    'https://www.amazon.com/gp/cart/view.html?pageNumber=3',
+  ], 'deduped, absolute, and excluding the page we are on');
+});
+
+test('scan follows pagination and merges every page', async () => {
+  const page2 = `<html><body><div id="sc-active-cart">
+      <div data-asin="0374602603" data-itemid="p2">
+        <a href="/dp/0374602603">x</a>
+        <span class="sc-product-title">The Dawn of Everything</span>
+        <div class="sc-product-byline">by David Graeber | Hardcover</div>
+      </div></div>
+      <ul class="a-pagination"><li><a href="/gp/cart/view.html?pageNumber=3">3</a></li></ul>
+    </body></html>`;
+
+  const page3 = `<html><body><div id="sc-active-cart">
+      <div data-asin="163557563X" data-itemid="p3">
+        <a href="/dp/163557563X">x</a>
+        <span class="sc-product-title">Piranesi</span>
+        <div class="sc-product-byline">by Susanna Clarke | Hardcover</div>
+      </div></div></body></html>`;
+
+  const requested = [];
+  const fetchImpl = async (url) => {
+    requested.push(String(url));
+    const body = String(url).includes('pageNumber=2') ? page2 : page3;
+    return { ok: true, text: async () => body };
+  };
+
+  const { api } = loadAmazonScraper('cart.html', { fetch: fetchImpl });
+  // The content script self-invokes on load (that call is executeScript's
+  // return value); let it settle before measuring this scan's requests.
+  await new Promise((r) => setTimeout(r, 50));
+  requested.length = 0;
+
+  const items = await api.scan();
+  const asins = Array.from(items, (i) => i.asin);
+
+  assert.equal(requested.length, 2, 'page 3 is discovered from page 2, not re-fetched');
+  assert.ok(asins.includes('0143039563'), 'page one still read from the live DOM');
+  assert.ok(asins.includes('0374602603'), 'page two');
+  assert.ok(asins.includes('163557563X'), 'page three');
+  assert.equal(new Set(asins).size, asins.length, 'no duplicates across pages');
+});
+
+test('a failed page fetch loses that page, not the whole scan', async () => {
+  const fetchImpl = async () => ({ ok: false, text: async () => '' });
+  const { api } = loadAmazonScraper('cart.html', { fetch: fetchImpl });
+
+  const items = await api.scan();
+  assert.ok(Array.from(items, (i) => i.asin).includes('0143039563'));
+});
+
 test('diagnostics report what matched and what was rejected', () => {
   const { api, document } = loadAmazonScraper('cart.html');
   const container = document.querySelector('#sc-active-cart');

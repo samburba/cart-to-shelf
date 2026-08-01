@@ -213,6 +213,60 @@
     return out;
   }
 
+  /**
+   * Every other page of a paginated cart. Wish lists load lazily and are
+   * handled by scrolling, but the cart paginates for real — and reading only
+   * page one silently loses everything after it.
+   */
+  function paginationUrls(doc, currentHref) {
+    const origin =
+      typeof location === 'undefined' ? 'https://www.amazon.com' : location.origin;
+    const urls = [];
+
+    for (const a of doc.querySelectorAll('a[href]')) {
+      const href = a.getAttribute('href') || '';
+      const paged =
+        /[?&]pageNumber=\d+/i.test(href) ||
+        /[?&]page=\d+/i.test(href) ||
+        (/\/gp\/cart\/view\.html/i.test(href) && /[?&]/.test(href));
+      if (!paged) continue;
+
+      let absolute;
+      try {
+        absolute = new URL(href, origin).href;
+      } catch {
+        continue;
+      }
+      if (absolute !== currentHref && !urls.includes(absolute)) urls.push(absolute);
+    }
+    return urls;
+  }
+
+  async function fetchDoc(url) {
+    try {
+      const res = await fetch(url, { credentials: 'same-origin' });
+      if (!res.ok) return null;
+      return new DOMParser().parseFromString(await res.text(), 'text/html');
+    } catch {
+      return null;
+    }
+  }
+
+  /** Merge item lists, keeping one entry per ASIN per surface. */
+  function mergeItems(lists) {
+    const seen = new Set();
+    const out = [];
+    for (const list of lists) {
+      for (const item of list || []) {
+        const key = item.asin + '|' + item.surface;
+        if (seen.has(key)) continue;
+        seen.add(key);
+        out.push(item);
+      }
+    }
+    return out;
+  }
+
   /** Wish lists load lazily; scroll until the item count stops growing. */
   async function loadAll() {
     const list = document.querySelector('#g-items');
@@ -226,9 +280,35 @@
     window.scrollTo(0, 0);
   }
 
+  const MAX_PAGES = 20;
+
   async function scan() {
     await loadAll();
-    return extractFrom(document);
+
+    const here = typeof location === 'undefined' ? '' : location.href;
+    const lists = [extractFrom(document)];
+
+    // Follow cart pagination breadth-first. Later pages link to further pages,
+    // so the frontier grows as we go; the cap is a runaway guard, not a limit
+    // anyone should hit.
+    const visited = new Set([here]);
+    const queue = paginationUrls(document, here);
+
+    while (queue.length && visited.size < MAX_PAGES) {
+      const url = queue.shift();
+      if (visited.has(url)) continue;
+      visited.add(url);
+
+      const doc = await fetchDoc(url);
+      if (!doc) continue;
+
+      lists.push(extractFrom(doc));
+      for (const next of paginationUrls(doc, url)) {
+        if (!visited.has(next) && !queue.includes(next)) queue.push(next);
+      }
+    }
+
+    return mergeItems(lists);
   }
 
   /**
@@ -239,7 +319,12 @@
    */
   function diagnose(doc = document) {
     const href = typeof location === 'undefined' ? '' : location.href;
-    const report = { url: href.split('?')[0], surfaces: [], rejected: [] };
+    const report = {
+      url: href.split('?')[0],
+      otherPages: paginationUrls(doc, href).length,
+      surfaces: [],
+      rejected: [],
+    };
 
     for (const surface of SURFACES) {
       const entry = { surface: surface.name, container: null, counts: {}, items: [] };
@@ -282,7 +367,15 @@
     return report;
   }
 
-  globalThis.CartToShelf = { extractFrom, extractItem, classify, scan, diagnose };
+  globalThis.CartToShelf = {
+    extractFrom,
+    extractItem,
+    classify,
+    scan,
+    diagnose,
+    paginationUrls,
+    mergeItems,
+  };
 })();
 
 // executeScript resolves with this promise's value.

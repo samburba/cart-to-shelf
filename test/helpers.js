@@ -9,16 +9,20 @@ import { parseHTML, DOMParser } from 'linkedom';
 const root = new URL('..', import.meta.url);
 export const read = (rel) => readFileSync(fileURLToPath(new URL(rel, root)), 'utf8');
 
-function load(fixtureName, scriptPath, globalName) {
+function load(fixtureName, scriptPath, globalName, extras = {}) {
   const { document, window } = parseHTML(read(`fixtures/${fixtureName}`));
 
   const context = vm.createContext({
     document,
     window: Object.assign(window, { scrollTo() {} }),
+    location: { origin: 'https://www.amazon.com', href: 'https://www.amazon.com/gp/cart/view.html' },
+    DOMParser,
+    URL,
     setTimeout,
     clearTimeout,
     console,
     CSS: { escape: (s) => String(s).replace(/["\\]/g, '\\$&') },
+    ...extras,
   });
   context.globalThis = context;
 
@@ -26,8 +30,8 @@ function load(fixtureName, scriptPath, globalName) {
   return { api: context[globalName], document };
 }
 
-export function loadAmazonScraper(fixtureName) {
-  return load(fixtureName, 'src/scrape/amazon.js', 'CartToShelf');
+export function loadAmazonScraper(fixtureName, extras) {
+  return load(fixtureName, 'src/scrape/amazon.js', 'CartToShelf', extras);
 }
 
 export function loadRemover(fixtureName) {
